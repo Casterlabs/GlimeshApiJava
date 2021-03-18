@@ -21,13 +21,6 @@ import lombok.Setter;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class GlimeshRealtimeChannel implements Closeable {
-    private static final String DEBUG_WS_SEND = "\u2191 %s";
-    private static final String DEBUG_WS_RECIEVE = "\u2193 %s";
-
-    private static final String PHX_JOIN = "[\"1\",\"1\",\"__absinthe__:control\",\"phx_join\",{}]";
-    private static final String PHX_DOC = "[\"1\",\"1\",\"__absinthe__:control\",\"doc\",%s]";
-    private static final String PHX_KA = "[\"1\",\"1\",\"phoenix\",\"heartbeat\",{}]";
-
     private static final String SUBSCRIBE_CHANNEL = "subscription{channel(id: %d){" + GlimeshChannel.GQL_DATA + "}}";
 
     private @Setter @Nullable GlimeshChannelListener listener;
@@ -38,6 +31,11 @@ public class GlimeshRealtimeChannel implements Closeable {
     private FastLogger logger;
     private Connection conn;
 
+    public GlimeshRealtimeChannel(@NonNull GlimeshAuth auth, @NonNull GlimeshChannel channel) {
+        this(auth, channel.getId());
+    }
+
+    @Deprecated
     public GlimeshRealtimeChannel(@NonNull GlimeshAuth auth, int channelId) {
         this.auth = auth;
         this.channelId = channelId;
@@ -78,21 +76,21 @@ public class GlimeshRealtimeChannel implements Closeable {
 
         @Override
         public void send(String payload) {
-            logger.debug(DEBUG_WS_SEND, payload);
+            logger.debug(GlimeshRealtimeHelper.DEBUG_WS_SEND, payload);
             super.send(payload);
         }
 
         @Override
         public void onOpen(ServerHandshake handshakedata) {
-            this.send(PHX_JOIN);
+            this.send(GlimeshRealtimeHelper.PHX_JOIN);
 
             String subscribe = String.format(SUBSCRIBE_CHANNEL, channelId);
 
-            this.send(String.format(PHX_DOC, GlimeshApiJava.formatQuery(subscribe)));
+            this.send(String.format(GlimeshRealtimeHelper.PHX_DOC, GlimeshApiJava.formatQuery(subscribe)));
 
             ThreadHelper.executeAsync("GlimeshRealtimeChannel KeepAlive: " + channelId, () -> {
                 while (this.isOpen()) {
-                    this.send(PHX_KA);
+                    this.send(GlimeshRealtimeHelper.PHX_KA);
                     try {
                         Thread.sleep(TimeUnit.SECONDS.toMillis(30));
                     } catch (InterruptedException ignored) {}
@@ -106,7 +104,7 @@ public class GlimeshRealtimeChannel implements Closeable {
 
         @Override
         public void onMessage(String raw) {
-            logger.debug(DEBUG_WS_RECIEVE, raw);
+            logger.debug(GlimeshRealtimeHelper.DEBUG_WS_RECIEVE, raw);
 
             JsonArray phx = GlimeshApiJava.GSON.fromJson(raw, JsonArray.class);
 

@@ -15,33 +15,32 @@ import com.google.gson.JsonObject;
 import co.casterlabs.glimeshapijava.GlimeshApiJava;
 import co.casterlabs.glimeshapijava.GlimeshAuth;
 import co.casterlabs.glimeshapijava.ThreadHelper;
-import co.casterlabs.glimeshapijava.types.GlimeshChannel;
-import co.casterlabs.glimeshapijava.types.GlimeshChatMessage;
+import co.casterlabs.glimeshapijava.types.GlimeshUser;
 import lombok.NonNull;
 import lombok.Setter;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
-public class GlimeshRealtimeChat implements Closeable {
-    private static final String SUBSCRIBE_CHAT = "subscription{chatMessage(channelId: %d){" + GlimeshChatMessage.GQL_DATA + "}}";
+public class GlimeshRealtimeFollowers implements Closeable {
+    private static final String SUBSCRIBE_CHANNEL = "subscription{followers(streamerId: %d){user{" + GlimeshUser.GQL_DATA + "}}}";
 
-    private @Setter @Nullable GlimeshChatListener listener;
+    private @Setter @Nullable GlimeshFollowerListener listener;
 
     private GlimeshAuth auth;
-    private int channelId;
+    private int userId;
 
     private FastLogger logger;
     private Connection conn;
 
-    public GlimeshRealtimeChat(@NonNull GlimeshAuth auth, @NonNull GlimeshChannel channel) {
-        this(auth, channel.getId());
+    public GlimeshRealtimeFollowers(@NonNull GlimeshAuth auth, @NonNull GlimeshUser user) {
+        this(auth, user.getId());
     }
 
     @Deprecated
-    public GlimeshRealtimeChat(@NonNull GlimeshAuth auth, int channelId) {
+    public GlimeshRealtimeFollowers(@NonNull GlimeshAuth auth, int userId) {
         this.auth = auth;
-        this.channelId = channelId;
+        this.userId = userId;
 
-        this.logger = new FastLogger("GlimeshRealtimeChat: " + channelId);
+        this.logger = new FastLogger("GlimeshRealtimeFollowers: " + userId);
         this.conn = new Connection();
     }
 
@@ -85,11 +84,11 @@ public class GlimeshRealtimeChat implements Closeable {
         public void onOpen(ServerHandshake handshakedata) {
             this.send(GlimeshRealtimeHelper.PHX_JOIN);
 
-            String subscribe = String.format(SUBSCRIBE_CHAT, channelId);
+            String subscribe = String.format(SUBSCRIBE_CHANNEL, userId);
 
             this.send(String.format(GlimeshRealtimeHelper.PHX_DOC, GlimeshApiJava.formatQuery(subscribe)));
 
-            ThreadHelper.executeAsync("GlimeshRealtimeChat KeepAlive: " + channelId, () -> {
+            ThreadHelper.executeAsync("GlimeshRealtimeFollowers KeepAlive: " + userId, () -> {
                 while (this.isOpen()) {
                     this.send(GlimeshRealtimeHelper.PHX_KA);
                     try {
@@ -123,9 +122,9 @@ public class GlimeshRealtimeChat implements Closeable {
 
                 case "subscription:data": {
                     if (listener != null) {
-                        GlimeshChatMessage chat = GlimeshApiJava.GSON.fromJson(payload.getAsJsonObject("result").getAsJsonObject("data").get("chatMessage"), GlimeshChatMessage.class);
+                        GlimeshUser follower = GlimeshApiJava.GSON.fromJson(payload.getAsJsonObject("result").getAsJsonObject("data").getAsJsonObject("followers").get("user"), GlimeshUser.class);
 
-                        listener.onChat(chat);
+                        listener.onFollow(follower);
                     }
                     break;
                 }
