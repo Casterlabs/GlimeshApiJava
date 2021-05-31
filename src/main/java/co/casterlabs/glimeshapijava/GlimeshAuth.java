@@ -62,13 +62,10 @@ public class GlimeshAuth implements AuthProvider {
     @SuppressWarnings("deprecation")
     @Override
     public void refresh() throws ApiAuthException {
-        try {
-            String url = String.format(REFRESH_URL, this.refreshToken, URLEncoder.encode(this.redirectUri), this.clientId, this.secret);
+        String url = String.format(REFRESH_URL, this.refreshToken, URLEncoder.encode(this.redirectUri), this.clientId, this.secret);
 
-            Response response = HttpUtil.sendHttp("{}", url);
+        try (Response response = HttpUtil.sendHttp("{}", url)) {
             String body = response.body().string();
-
-            response.close();
 
             JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
 
@@ -92,19 +89,18 @@ public class GlimeshAuth implements AuthProvider {
     public static AuthResponse authorize(String code, String redirectUri, String clientId, String secret) throws IOException, ApiAuthException {
         String url = String.format(AUTH_CODE_URL, code, URLEncoder.encode(redirectUri), clientId, secret);
 
-        Response response = HttpUtil.sendHttp("{}", url);
-        String body = response.body().string();
+        try (Response response = HttpUtil.sendHttp("{}", url)) {
+            String body = response.body().string();
 
-        response.close();
+            JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
 
-        JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
-
-        if (json.has("error")) {
-            throw new ApiAuthException(json.get("error").getAsString() + ": " + json.get("error_description").getAsString());
-        } else if (json.has("errors")) {
-            throw new ApiAuthException(json.toString());
-        } else {
-            return GlimeshApiJava.GSON.fromJson(json, AuthResponse.class);
+            if (json.has("error")) {
+                throw new ApiAuthException(json.get("error").getAsString() + ": " + json.get("error_description").getAsString());
+            } else if (json.has("errors")) {
+                throw new ApiAuthException(json.toString());
+            } else {
+                return GlimeshApiJava.GSON.fromJson(json, AuthResponse.class);
+            }
         }
     }
 

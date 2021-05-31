@@ -31,19 +31,18 @@ public class GlimeshSendChatMessageRequest extends AuthenticatedWebRequest<Void,
     protected Void execute() throws ApiException, ApiAuthException, IOException {
         String query = String.format(MUTATION, this.channelId, new JsonPrimitive(this.message).toString());
 
-        Response response = HttpUtil.sendHttp(query, this.auth);
-        String body = response.body().string();
+        try (Response response = HttpUtil.sendHttp(query, this.auth)) {
+            String body = response.body().string();
 
-        response.close();
+            JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
 
-        JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
-
-        if (response.code() == 401) {
-            throw new ApiAuthException(json.toString());
-        } else if (json.has("errors")) {
-            throw new ApiException(json.toString());
-        } else {
-            return null;
+            if (response.code() == 401) {
+                throw new ApiAuthException(json.toString());
+            } else if (json.has("errors")) {
+                throw new ApiException(json.toString());
+            } else {
+                return null;
+            }
         }
     }
 

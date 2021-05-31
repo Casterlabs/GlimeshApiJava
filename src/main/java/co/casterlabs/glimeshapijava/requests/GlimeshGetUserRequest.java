@@ -37,19 +37,18 @@ public class GlimeshGetUserRequest extends AuthenticatedWebRequest<GlimeshUser, 
         String arguments = (this.username == null) ? String.format("id: %d", this.id) : String.format("username: \"%s\"", this.username);
         String query = String.format(QUERY_BASE, arguments);
 
-        Response response = HttpUtil.sendHttp(query, this.auth);
-        String body = response.body().string();
+        try (Response response = HttpUtil.sendHttp(query, this.auth)) {
+            String body = response.body().string();
 
-        response.close();
+            JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
 
-        JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
-
-        if (response.code() == 401) {
-            throw new ApiAuthException(json.toString());
-        } else if (json.has("errors")) {
-            throw new ApiException(json.toString());
-        } else {
-            return GlimeshApiJava.GSON.fromJson(json.getAsJsonObject("data").get("user"), GlimeshUser.class);
+            if (response.code() == 401) {
+                throw new ApiAuthException(json.toString());
+            } else if (json.has("errors")) {
+                throw new ApiException(json.toString());
+            } else {
+                return GlimeshApiJava.GSON.fromJson(json.getAsJsonObject("data").get("user"), GlimeshUser.class);
+            }
         }
     }
 

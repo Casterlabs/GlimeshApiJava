@@ -23,19 +23,18 @@ public class GlimeshGetMyselfRequest extends AuthenticatedWebRequest<GlimeshUser
 
     @Override
     protected GlimeshUser execute() throws ApiException, ApiAuthException, IOException {
-        Response response = HttpUtil.sendHttp(QUERY, this.auth);
-        String body = response.body().string();
+        try (Response response = HttpUtil.sendHttp(QUERY, this.auth)) {
+            String body = response.body().string();
 
-        response.close();
+            JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
 
-        JsonObject json = GlimeshApiJava.GSON.fromJson(body, JsonObject.class);
-
-        if (response.code() == 401) {
-            throw new ApiAuthException(json.toString());
-        } else if (json.has("errors")) {
-            throw new ApiAuthException(json.toString());
-        } else {
-            return GlimeshApiJava.GSON.fromJson(json.getAsJsonObject("data").get("myself"), GlimeshUser.class);
+            if (response.code() == 401) {
+                throw new ApiAuthException(json.toString());
+            } else if (json.has("errors")) {
+                throw new ApiAuthException(json.toString());
+            } else {
+                return GlimeshApiJava.GSON.fromJson(json.getAsJsonObject("data").get("myself"), GlimeshUser.class);
+            }
         }
     }
 
