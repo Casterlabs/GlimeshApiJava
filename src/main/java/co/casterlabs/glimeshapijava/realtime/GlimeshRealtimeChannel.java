@@ -39,7 +39,6 @@ public class GlimeshRealtimeChannel implements Closeable {
         this.channelId = channelId;
 
         this.logger = new FastLogger("GlimeshRealtimeChannel: " + channelId);
-        this.conn = new Connection();
     }
 
     public void connect() {

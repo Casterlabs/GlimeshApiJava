@@ -39,7 +39,6 @@ public class GlimeshRealtimeFollowers implements Closeable {
         this.userId = userId;
 
         this.logger = new FastLogger("GlimeshRealtimeFollowers: " + userId);
-        this.conn = new Connection();
     }
 
     public void connect() {
