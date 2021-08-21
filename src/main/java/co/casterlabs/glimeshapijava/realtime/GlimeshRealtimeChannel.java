@@ -1,11 +1,9 @@
 package co.casterlabs.glimeshapijava.realtime;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.enums.ReadyState;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,39 +43,30 @@ public class GlimeshRealtimeChannel implements Closeable {
     }
 
     public void connect() {
-        if (!this.isOpen()) {
-            if (this.conn.getReadyState() == ReadyState.NOT_YET_CONNECTED) {
-                this.conn.connect();
-            } else {
-                this.conn.reconnect();
-            }
+        if (this.conn == null) {
+            this.conn = new Connection();
+            this.conn.connect();
+        } else {
+            throw new IllegalStateException("You must close the connection before reconnecting.");
         }
     }
 
     public void connectBlocking() throws InterruptedException {
-        if (!this.isOpen()) {
-            if (this.conn.getReadyState() == ReadyState.NOT_YET_CONNECTED) {
-                this.conn.connectBlocking();
-            } else {
-                this.conn.reconnectBlocking();
-            }
+        if (this.conn == null) {
+            this.conn = new Connection();
+            this.conn.connectBlocking();
+        } else {
+            throw new IllegalStateException("You must close the connection before reconnecting.");
         }
     }
 
     public boolean isOpen() {
-        return this.conn.isOpen();
+        return this.conn != null;
     }
 
-    public void disconnect() {
-        if (this.isOpen()) {
-            this.conn.close();
-        }
-    }
-
-    public void disconnectBlocking() throws InterruptedException {
-        if (this.isOpen()) {
-            this.conn.closeBlocking();
-        }
+    @Override
+    public void close() {
+        this.conn.close();
     }
 
     private class Connection extends WebSocketClient {
@@ -145,6 +134,8 @@ public class GlimeshRealtimeChannel implements Closeable {
 
         @Override
         public void onClose(int code, String reason, boolean remote) {
+            conn = null;
+
             if (listener != null) {
                 listener.onClose(remote);
             }
@@ -155,15 +146,6 @@ public class GlimeshRealtimeChannel implements Closeable {
             logger.exception(e);
         }
 
-    }
-
-    @Override
-    public void close() throws IOException {
-        try {
-            this.disconnectBlocking();
-        } catch (InterruptedException e) {
-            throw new IOException(e);
-        }
     }
 
 }
