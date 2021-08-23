@@ -27,6 +27,7 @@ public class GlimeshAuth implements AuthProvider {
 
     private @Getter String accessToken;
     private @Getter int expiresIn;
+    private @Getter String scope;
 
     public GlimeshAuth(String refreshToken, String redirectUri, String clientId, String secret) throws ApiAuthException {
         this.refreshToken = refreshToken;
@@ -79,6 +80,7 @@ public class GlimeshAuth implements AuthProvider {
                 this.refreshToken = data.refreshToken;
                 this.accessToken = data.accessToken;
                 this.expiresIn = data.expiresIn;
+                this.scope = data.scope;
             }
         } catch (IOException e) {
             throw new ApiAuthException(e);
